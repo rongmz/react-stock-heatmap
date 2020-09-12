@@ -2,9 +2,24 @@
   "name": "@rongmz/react-stock-heatmap",
   "version": "1.0.0",
   "description": "This is a react chart library for genarating &quot;Stock Heatmap&quot; with given market depth data. Stock Heatmap graph useful for day traders.",
-  "author": "rongmz",
+  "author": "Rounak Saha",
   "license": "MIT",
-  "repository": "rongmz/react-stock-heatmap",
+  "keywords": [
+    "Stock-Heat-map",
+    "react",
+    "chart",
+    "intraday",
+    "trading",
+    "market-depth"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rongmz/react-stock-heatmap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rongmz/react-stock-heatmap/issues"
+  },
+  "homepage": "https://github.com/rongmz/react-stock-heatmap#readme",
   "main": "dist/index.js",
   "module": "dist/index.modern.js",
   "source": "src/index.js",
@@ -24,7 +39,8 @@
     "deploy": "gh-pages -d example/build"
   },
   "peerDependencies": {
-    "react": "^16.0.0"
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
   },
   "devDependencies": {
     "microbundle-crl": "^0.13.10",
@@ -49,5 +65,15 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@rongmz/simple-event-emitter": "^1.0.3",
+    "d3-array": "^2.7.1",
+    "d3-color": "^2.0.0",
+    "d3-format": "^2.0.0",
+    "d3-interpolate": "^2.0.1",
+    "d3-scale": "^3.2.2",
+    "d3-shape": "^2.0.0",
+    "d3-zoom": "^2.0.0"
+  }
 }
