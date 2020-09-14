@@ -15,7 +15,7 @@ export default class StockHeatmap extends React.Component {
   shouldComponentUpdate(nextProps, nextState) {
     const shouldUpdate = this.props.width !== nextProps.width
       || this.props.height !== nextProps.height;
-    if (shouldUpdate) updateHeatmapDimensions();
+    if (shouldUpdate) this.updateHeatmapDimensions();
     return shouldUpdate;
   }
 
