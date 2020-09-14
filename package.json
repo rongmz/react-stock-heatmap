@@ -67,7 +67,6 @@
     "dist"
   ],
   "dependencies": {
-    "@rongmz/simple-event-emitter": "^1.0.3",
     "d3-array": "^2.7.1",
     "d3-color": "^2.0.0",
     "d3-format": "^2.0.0",
