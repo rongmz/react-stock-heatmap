@@ -46,6 +46,10 @@ export default class StockHeatmap extends React.Component {
     sellColor: '#ed6666',
     textOnSellColor: '#ffffff',
     tradeColor: '#7434eb',
+    axisTickSize: 6,
+    axisColor: '#000000',
+    xAxisTextPadding: 6,
+    yAxisTextPadding: 6,
     hmWidth: () => (this.props.width - this.defaults.borderPadding[1] - this.defaults.borderPadding[3] - this.defaults.bidAskWidth - this.defaults.axisYWidth),
     hmHeight: () => (this.props.height - this.defaults.borderPadding[0] - this.defaults.borderPadding[2] - this.defaults.axisXHeight),
     clearColor: '#ffffff',
@@ -82,6 +86,8 @@ export default class StockHeatmap extends React.Component {
   bidAskScale = null;
   /** @type {d3Scale.ScaleBand<string>} */
   yScale = null;
+  /** @type {number[]} */
+  yDomainValues = null;
   // ------------------ D3 Variables ---------------------
 
 
@@ -98,9 +104,10 @@ export default class StockHeatmap extends React.Component {
         .range([0, this.defaults.hmWidth()])
         .domain(this.windowedData.map(d => d.ts));
       // setup y-scale
+      this.yDomainValues = extractBidPrices(this.windowedData).sort((a, b) => a - b);
       this.yScale = d3.scaleBand()
         .range([this.defaults.hmHeight(), 0])
-        .domain(extractBidPrices(this.windowedData).sort());
+        .domain(this.yDomainValues);
       // setup bid ask scale
       this.bidAskScale = d3.scaleLinear()
         .range([0, this.defaults.bidAskWidth])
@@ -113,20 +120,87 @@ export default class StockHeatmap extends React.Component {
    * This method will be called after an update of internal data is performed.
    */
   updateHeatmap() {
-    // 1. update scale and dimensions
-    this.updateHeatmapDimensions();
+    if (this.drawingContext !== null) {
+      // 1. update scale and dimensions
+      this.updateHeatmapDimensions();
 
-    // 2. Draw the bid ask spread heatmap
-    this.clearCanvas(this.defaults.borderPadding[3], this.defaults.borderPadding[0],
-      this.defaults.hmWidth(), this.defaults.hmHeight(), this.defaults.clearColor);
-    this.drawMainGraph();
+      // 2. Draw the bid ask spread heatmap
+      this.clearCanvas(this.defaults.borderPadding[3], this.defaults.borderPadding[0],
+        this.defaults.hmWidth(), this.defaults.hmHeight(), this.defaults.clearColor);
+      this.drawMainGraph();
+
+      // 3. Draw xy Axis
+      this.drawXAxis();
+      this.drawYAxis();
 
 
-    // console.log('heatmap draw update');
-    // this.clearCanvas(0, 0, this.defaults.hmWidth(), this.defaults.hmHeight(), '#aaaaaa');
+      // console.log('heatmap draw update');
+      // this.clearCanvas(0, 0, this.defaults.hmWidth(), this.defaults.hmHeight(), '#aaaaaa');
+    }
   }
 
   // ------------------------------ START: Canvas draw functions ---------------------------------------
+
+  /**
+   * Draws X Axis
+   */
+  drawXAxis() {
+    // clear canvas before axis draw
+    this.clearCanvas(
+      this.defaults.borderPadding[3], this.defaults.borderPadding[0] + this.defaults.hmHeight(),
+      this.defaults.hmWidth(), this.defaults.axisXHeight, this.defaults.clearColor
+    );
+    // draw axis
+    this.drawingContext.save();
+    this.drawingContext.beginPath();
+    this.drawingContext.translate(this.defaults.borderPadding[3], this.defaults.borderPadding[0] + this.defaults.hmHeight());
+    this.drawingContext.moveTo(0, 0);
+    this.drawingContext.lineTo(this.defaults.hmWidth(), 0);
+    this.drawingContext.textAlign = 'center';
+    this.drawingContext.textBaseline = 'top';
+    this.windowedData.map((d, i) => {
+      let x = this.xScale(d.ts);
+      this.drawingContext.moveTo(x, 0);
+      this.drawingContext.lineTo(x, this.defaults.axisTickSize);
+      if (i % 2 === 0)
+        this.drawingContext.fillText(d.ts, x, this.defaults.axisTickSize + this.defaults.xAxisTextPadding);
+    });
+    this.drawingContext.lineWidth = 1.2;
+    this.drawingContext.strokeStyle = this.defaults.axisColor;
+    this.drawingContext.stroke();
+    this.drawingContext.restore();
+  }
+
+  /**
+   * Draws Y Axis
+   */
+  drawYAxis() {
+    if (this.yDomainValues !== null) {
+      // clear canvas before axis draw
+      this.clearCanvas(
+        this.defaults.borderPadding[3] + this.defaults.hmWidth(), this.defaults.borderPadding[0],
+        this.defaults.axisYWidth, this.defaults.hmHeight() + this.defaults.axisTickSize, this.defaults.clearColor
+      );
+      // translate and draw
+      this.drawingContext.save();
+      this.drawingContext.beginPath();
+      this.drawingContext.translate(this.defaults.borderPadding[3] + this.defaults.hmWidth(), this.defaults.borderPadding[0]);
+      this.drawingContext.moveTo(0, 0);
+      this.drawingContext.lineTo(0, this.defaults.hmHeight() + this.defaults.axisTickSize);
+      this.drawingContext.textAlign = 'start';
+      this.drawingContext.textBaseline = 'top';
+      this.yDomainValues.map(d => {
+        let y = this.yScale(d);
+        this.drawingContext.moveTo(0, y);
+        this.drawingContext.lineTo(this.defaults.axisTickSize, y);
+        this.drawingContext.fillText(d.toFixed(2), this.defaults.axisTickSize + this.defaults.yAxisTextPadding, y, this.defaults.axisYWidth - this.defaults.axisTickSize + this.defaults.yAxisTextPadding);
+      });
+      this.drawingContext.lineWidth = 1.2;
+      this.drawingContext.strokeStyle = this.defaults.axisColor;
+      this.drawingContext.stroke();
+      this.drawingContext.restore();
+    }
+  }
 
   /**
    * Draws background heatmap for both buys and sells
