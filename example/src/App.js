@@ -13,7 +13,7 @@ export default () => {
   // ------------ Load data -------------
   React.useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:3000/20200814').then(async ({ body, headers }) => {
+    fetch('http://localhost:3000/20200814_1h').then(async ({ body, headers }) => {
       const reader = body.getReader();
       // Step 2: get total length
       const contentLength = +headers.get('Content-Length');
