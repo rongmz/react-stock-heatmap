@@ -7,6 +7,8 @@ import * as d3Format from 'd3-format';
 import * as d3Interpolate from 'd3-interpolate';
 import * as d3Shape from 'd3-shape';
 import * as d3Zoom from 'd3-zoom';
+import * as d3Timer from 'd3-timer';
+import * as d3Ease from 'd3-ease';
 import { extractBidPrices, extractBidVolumes, extractMaxTradedVolume, extractMaxVolume } from './utils';
 
 export const d3 = Object.assign(
@@ -14,7 +16,7 @@ export const d3 = Object.assign(
     Object.assign({}, d3Scale, d3Array, d3Color)
     , d3Format, d3Interpolate, d3Shape
   )
-  , d3Zoom
+  , d3Zoom, d3Ease, d3Timer
 );
 
 /**
@@ -37,19 +39,22 @@ export default class StockHeatmap extends React.Component {
 
   /** Default Theme colors and dimensions */
   defaults = {
-    borderPadding: [0, 0, 0, 0],
-    bidAskWidth: 150,
+    borderPadding: [5, 5, 0, 0],
+    bidAskWidth: 100,
     axisYWidth: 50,
     axisXHeight: 50,
-    buyColor: '#66ed91',
+    buyColor: '#388e3c',
     textOnBuyColor: '#ffffff',
-    sellColor: '#ed6666',
+    sellColor: '#d32f2f',
     textOnSellColor: '#ffffff',
+    textOnBackground: '#000000',
     tradeColor: '#7434eb',
     axisTickSize: 6,
     axisColor: '#000000',
     xAxisTextPadding: 6,
     yAxisTextPadding: 6,
+    bidAskGraphPaddingLeft: 10,
+    bidAskTransitionDuration: 500,
     hmWidth: () => (this.props.width - this.defaults.borderPadding[1] - this.defaults.borderPadding[3] - this.defaults.bidAskWidth - this.defaults.axisYWidth),
     hmHeight: () => (this.props.height - this.defaults.borderPadding[0] - this.defaults.borderPadding[2] - this.defaults.axisXHeight),
     clearColor: '#ffffff',
@@ -59,7 +64,6 @@ export default class StockHeatmap extends React.Component {
     // console.log('shouldComponentUpdate', nextProps);
     const shouldUpdate = this.props.width !== nextProps.width
       || this.props.height !== nextProps.height;
-    if (shouldUpdate) this.updateHeatmap();
     return shouldUpdate;
   }
 
@@ -68,12 +72,14 @@ export default class StockHeatmap extends React.Component {
     // console.log('component mouted');
     if (this.canvasRef.current !== null) {
       this.drawingContext = this.canvasRef.current.getContext('2d');
+      this.updateHeatmap();
     }
   }
   componentDidUpdate() {
     // console.log('component updtated');
     if (this.canvasRef.current !== null) {
       this.drawingContext = this.canvasRef.current.getContext('2d');
+      this.updateHeatmap();
     }
   }
   // -------------------END:: Lifecycle methods to retrive 2d context from updated dom---------------------------
@@ -88,15 +94,18 @@ export default class StockHeatmap extends React.Component {
   yScale = null;
   /** @type {number[]} */
   yDomainValues = null;
+  /** @type {d3Timer.Timer} */
+  bidAskAnimTimer = null;
+  /** @type {{[key:number]:number}} */
+  bidAskBarAnimConfig = {};
   // ------------------ D3 Variables ---------------------
-
 
   /**
    * This function will be called if there is any dimension change on heatmap
    * This function changes the d3 scales based on windowed data
    */
   updateHeatmapDimensions() {
-    console.log('heatmap dimension updated, update scale domains');
+    // console.log('heatmap dimension updated, update scale domains');
     const { width, height } = this.props;
     if (width > 0 && height > 0 && this.windowedData.length > 0) {
       // setup x-scale
@@ -121,6 +130,7 @@ export default class StockHeatmap extends React.Component {
    */
   updateHeatmap() {
     if (this.drawingContext !== null) {
+      // console.log('heatmap update req');
       // 1. update scale and dimensions
       this.updateHeatmapDimensions();
 
@@ -131,8 +141,10 @@ export default class StockHeatmap extends React.Component {
 
       // 3. Draw xy Axis
       this.drawXAxis();
-      this.drawYAxis();
+      this.drawYAxisAndBidAskGraph();
 
+      // 4. Draw buy-to-sell ratio
+      this.drawBuy2SellRatio();
 
       // console.log('heatmap draw update');
       // this.clearCanvas(0, 0, this.defaults.hmWidth(), this.defaults.hmHeight(), '#aaaaaa');
@@ -140,6 +152,29 @@ export default class StockHeatmap extends React.Component {
   }
 
   // ------------------------------ START: Canvas draw functions ---------------------------------------
+
+  /**
+   * Draw buy/sell ratio at bottom right corner
+   */
+  drawBuy2SellRatio() {
+    if (this.windowedData.length > 0) {
+      // dimension
+      const d = this.windowedData[this.windowedData.length - 1];
+      const x = this.defaults.borderPadding[3] + this.defaults.hmWidth() + this.defaults.axisTickSize;
+      const y = this.defaults.borderPadding[0] + this.defaults.hmHeight() + this.defaults.axisTickSize;
+      const w = this.props.width - x;
+      const h = this.props.height - y;
+      this.clearCanvas(x, y, w, h, this.defaults.clearColor);
+      let textHeight = (h - 15) / 2;
+      this.drawingContext.save();
+      this.drawingContext.textAlign = 'center';
+      this.drawingContext.textBaseline = 'middle';
+      this.drawingContext.font = `bold ${textHeight}px sans-serif`;
+      this.drawingContext.fillText((d.marketDepth.buyOrderVolume / d.marketDepth.sellOrderVolume).toFixed(2), x + w / 2, y + textHeight / 2);
+      this.drawingContext.fillText('Buy/Sell', x + w / 2, y + textHeight * 1.5 + 5);
+      this.drawingContext.restore();
+    }
+  }
 
   /**
    * Draws X Axis
@@ -172,9 +207,9 @@ export default class StockHeatmap extends React.Component {
   }
 
   /**
-   * Draws Y Axis
+   * Draws Y Axis and Bid Ask graph at the same time
    */
-  drawYAxis() {
+  drawYAxisAndBidAskGraph() {
     if (this.yDomainValues !== null) {
       // clear canvas before axis draw
       this.clearCanvas(
@@ -189,16 +224,82 @@ export default class StockHeatmap extends React.Component {
       this.drawingContext.lineTo(0, this.defaults.hmHeight() + this.defaults.axisTickSize);
       this.drawingContext.textAlign = 'start';
       this.drawingContext.textBaseline = 'top';
+      let maxTextWidth = 0;
       this.yDomainValues.map(d => {
         let y = this.yScale(d);
         this.drawingContext.moveTo(0, y);
         this.drawingContext.lineTo(this.defaults.axisTickSize, y);
-        this.drawingContext.fillText(d.toFixed(2), this.defaults.axisTickSize + this.defaults.yAxisTextPadding, y, this.defaults.axisYWidth - this.defaults.axisTickSize + this.defaults.yAxisTextPadding);
+        this.drawingContext.fillText(d.toFixed(2), this.defaults.axisTickSize + this.defaults.yAxisTextPadding, y + 2, this.defaults.axisYWidth - this.defaults.axisTickSize + this.defaults.yAxisTextPadding);
+        let tw = this.drawingContext.measureText(d.toFixed(2)).width;
+        maxTextWidth = maxTextWidth >= tw ? maxTextWidth : tw;
       });
       this.drawingContext.lineWidth = 1.2;
       this.drawingContext.strokeStyle = this.defaults.axisColor;
       this.drawingContext.stroke();
       this.drawingContext.restore();
+
+      // Now I will draw the bid ask strength graph,
+      const x = this.defaults.borderPadding[3] + this.defaults.hmWidth() + maxTextWidth + this.defaults.axisTickSize + this.defaults.yAxisTextPadding + this.defaults.bidAskGraphPaddingLeft;
+      const y = this.defaults.borderPadding[0];
+      this.drawBidAskGraph(x, y);
+    }
+  }
+
+  /**
+   * Draw and animate Bid Ask graph
+   * @param {number} x 
+   * @param {number} y 
+   */
+  drawBidAskGraph(x, y) {
+    if (this.windowedData.length > 0) {
+      if (this.bidAskAnimTimer !== null) {
+        this.bidAskAnimTimer.stop();
+        this.bidAskAnimTimer = null;
+      }
+      this.bidAskAnimTimer = d3.timer(elapsed => {
+        // compute how far through the animation we are (0 to 1)
+        const t = Math.min(1, d3.easeCubic(elapsed / this.defaults.bidAskTransitionDuration));
+
+        // ----------------draw--------------------
+        // console.log('drawing bid ask graph');
+        this.clearCanvas(
+          x, y, this.defaults.bidAskWidth, this.defaults.hmHeight() + this.defaults.axisTickSize, this.defaults.clearColor
+        );
+        const h = this.yScale.bandwidth() - 2;
+        const d = this.windowedData[this.windowedData.length - 1];
+        const maxBidAskVol = extractMaxVolume(d);
+        this.drawingContext.save();
+        this.drawingContext.translate(x, y);
+        this.drawingContext.lineWidth = 0;
+        this.drawingContext.textBaseline = 'middle';
+        const drawBars = (arr, color, textColor) => {
+          arr.map(v => {
+            this.drawingContext.fillStyle = color;
+            const l = this.defaults.bidAskWidth * (+v.qty / maxBidAskVol);
+            // save v bars length
+            this.bidAskBarAnimConfig[v.rate] = d3.interpolateNumber(this.bidAskBarAnimConfig[v.rate] || 0, l)(t);
+            this.drawingContext.fillRect(0, this.yScale(v.rate), this.bidAskBarAnimConfig[v.rate], h);
+            let tw = this.drawingContext.measureText(v.qty).width;
+            if (this.defaults.bidAskWidth - this.bidAskBarAnimConfig[v.rate] - 2 >= tw) {
+              // text outside bar
+              this.drawingContext.textAlign = 'start';
+              this.drawingContext.fillStyle = this.defaults.textOnBackground;
+              this.drawingContext.fillText(v.qty, this.bidAskBarAnimConfig[v.rate] + 2, this.yScale(v.rate) + h / 2 + 1);
+            } else {
+              this.drawingContext.textAlign = 'end';
+              this.drawingContext.fillStyle = textColor;
+              this.drawingContext.fillText(v.qty, this.bidAskBarAnimConfig[v.rate] - 2, this.yScale(v.rate) + h / 2 + 1);
+            }
+          });
+        }
+        drawBars(d.marketDepth.buys, this.defaults.buyColor, this.defaults.textOnBuyColor);
+        drawBars(d.marketDepth.sells, this.defaults.sellColor, this.defaults.textOnSellColor);
+        this.drawingContext.restore();
+        // ----------------draw--------------------
+
+        // if this animation is over
+        if (t === 1) this.bidAskAnimTimer.stop();
+      });
     }
   }
 
@@ -211,12 +312,11 @@ export default class StockHeatmap extends React.Component {
       const maxTradedVolume = extractMaxTradedVolume(this.windowedData);
       const xh2 = this.xScale.bandwidth() * 0.5;
       const yh2 = this.yScale.bandwidth() * 0.5;
+      this.drawingContext.translate(this.defaults.borderPadding[3], this.defaults.borderPadding[0]);
       this.windowedData.map(d => {
         const marketDepth = d.marketDepth;
         const ts = d.ts;
         const maxBidAskVol = extractMaxVolume(d);
-        // draw 
-        this.drawingContext.translate(this.defaults.borderPadding[3], this.defaults.borderPadding[0]);
         // draw buys
         if (marketDepth.buys && marketDepth.buys.length > 0) {
           let color = d3.color(this.defaults.buyColor).rgb();
@@ -317,6 +417,7 @@ export default class StockHeatmap extends React.Component {
     }
   }
 
+  i = 0;
   /**
    * This updates the data in array to be viewed in graph
    */
@@ -325,6 +426,14 @@ export default class StockHeatmap extends React.Component {
       this.windowedData = this.data.slice(-this.windowLength);
     }
     this.updateHeatmap();
+    // -------------------- TEST --------------------
+    // setInterval(() => {
+    //   this.i++;
+    //   this.windowedData = this.data.slice(this.i, this.windowLength + this.i);
+    //   console.log('changed', this.windowedData);
+    //   this.updateHeatmap();
+    // }, 1000);
+    // -------------------- TEST --------------------
   }
 
   /**
@@ -332,7 +441,7 @@ export default class StockHeatmap extends React.Component {
    */
   render() {
     const { width, height } = this.props;
-    console.log('heatmap rendered', width, height, this.data);
+    // console.log('heatmap rendered', width, height, this.data);
     return (
       <canvas ref={this.canvasRef} width={width || 300} height={height || 150} className={styles.mapCanvas}></canvas>
     );
