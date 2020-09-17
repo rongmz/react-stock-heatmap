@@ -4,6 +4,14 @@
 
 [![NPM](https://img.shields.io/npm/v/@rongmz/react-stock-heatmap.svg)](https://www.npmjs.com/package/@rongmz/react-stock-heatmap) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
+
+**[Live Demo Here](https://rongmz.in/react-stock-heatmap/)**
+
+
+## Screenshot
+![Screenshot](./screenshot.png)
+
+
 ## Install
 
 ```bash
@@ -13,18 +21,38 @@ npm install --save @rongmz/react-stock-heatmap
 ## Usage
 
 ```jsx
-import React, { Component } from 'react'
+import React from 'react'
+import StockHeatmap from '@rongmz/react-stock-heatmap';
 
-import MyComponent from '@rongmz/react-stock-heatmap'
-import '@rongmz/react-stock-heatmap/dist/index.css'
+class Example extends React.Component {
 
-class Example extends Component {
-  render() {
-    return <MyComponent />
+  heatmapRef = React.createRef();
+
+  loadDataFromFile = () => {
+    // Somehow load market depth datapoints
+    ...
+    ...
+    // set the data to StockHeatmap to render graph
+    if(heatmapRef.current !== null) {
+      heatmapRef.current.setData(data);
+    }
   }
+
+  onLiveDataReceived = (data) => {
+    // Add more data to existing data. This is useful for live graphing.
+    if(heatmapRef.current !== null) {
+      heatmapRef.current.addData(data);
+    }
+  }
+
+  render() {
+    return <StockHeatmap ref={heatmapRef} width={800} height={600} />
+  }
+
 }
 ```
 
+
 ## License
 
-MIT © [rongmz](https://github.com/rongmz)
+MIT © [Rounak Saha](https://github.com/rongmz)

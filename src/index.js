@@ -1,5 +1,4 @@
 import React from 'react';
-import styles from './styles.module.css';
 import * as d3Scale from 'd3-scale';
 import * as d3Array from 'd3-array';
 import * as d3Color from 'd3-color';
@@ -307,12 +306,10 @@ export default class StockHeatmap extends React.Component {
     this.drawingContext.textAlign = 'left';
     this.drawingContext.fillText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`, 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
     let w = this.drawingContext.measureText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`).width;
-    if(this.windowedData.length>0) 
-      this.drawingContext.fillText(`LTP:  ${
-        this.windowedData[this.windowedData.length-1].marketDepth.lastTradedPrice
-      }     LTQ:  ${
-        this.windowedData[this.windowedData.length-1].marketDepth.lastTradedQty
-      }`, 20 + w + 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
+    if (this.windowedData.length > 0)
+      this.drawingContext.fillText(`LTP:  ${this.windowedData[this.windowedData.length - 1].marketDepth.lastTradedPrice
+        }     LTQ:  ${this.windowedData[this.windowedData.length - 1].marketDepth.lastTradedQty
+        }`, 20 + w + 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
     this.drawingContext.lineWidth = 1.2;
     this.drawingContext.strokeStyle = this.defaults.axisColor;
     this.drawingContext.stroke();
@@ -512,7 +509,7 @@ export default class StockHeatmap extends React.Component {
    * @param {any[]} data The data to set
    */
   setData = (data) => {
-    console.log('setdata called=', data);
+    // console.log('setdata called=', data);
     if (data && data.length > 0) {
       this.data = data;
       this.updateWindowedData();
@@ -575,7 +572,13 @@ export default class StockHeatmap extends React.Component {
     const { width, height } = this.props;
     // console.log('heatmap rendered', width, height, this.data);
     return (
-      <canvas ref={this.canvasRef} width={width || 300} height={height || 150} className={styles.mapCanvas}></canvas>
+      <canvas ref={this.canvasRef} width={width || 300} height={height || 150}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+          cursor: 'crosshair',
+        }}></canvas>
     );
   }
 }
