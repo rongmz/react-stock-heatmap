@@ -7,6 +7,7 @@ export default () => {
 
   const [loading, setLoading] = React.useState(true);
   const progressRef = React.useRef(null);
+  /** @type {React.MutableRefObject<StockHeatmap>} */
   const heatmapRef = React.useRef(null);
   const [windowDim, setWindowDim] = React.useState([0, 0]);
 
