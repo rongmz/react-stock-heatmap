@@ -98,3 +98,15 @@ code {
 .loadingSpinner {
   margin-right: 10px;
 }
+
+.btnContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+}
+
+.btnContainer button {
+  margin: 5px;
+}

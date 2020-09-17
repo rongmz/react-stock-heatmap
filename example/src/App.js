@@ -80,6 +80,15 @@ export default () => {
         </div>}
 
       <StockHeatmap ref={heatmapRef} width={windowDim[0]} height={windowDim[1]} />
+
+      <div className="btnContainer">
+        <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60) }}>zoom 1 minute</button>
+        <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 2) }}>zoom 2 minutes</button>
+        <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 3) }}>zoom 3 minutes</button>
+        <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 4) }}>zoom 4 minutes</button>
+        <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 5) }}>zoom 5 minutes</button>
+        <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 10) }}>zoom 10 minutes</button>
+      </div>
     </React.Fragment>
   )
 }

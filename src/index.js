@@ -9,7 +9,7 @@ import * as d3Shape from 'd3-shape';
 import * as d3Zoom from 'd3-zoom';
 import * as d3Timer from 'd3-timer';
 import * as d3Ease from 'd3-ease';
-import { extractBidPrices, extractBidVolumes, extractMaxTradedVolume, extractMaxVolume } from './utils';
+import { extractBidPrices, extractBidVolumes, extractMaxTradedVolume, extractMaxVolume, zoomTimeFormat } from './utils';
 
 export const d3 = Object.assign(
   Object.assign(
@@ -304,6 +304,8 @@ export default class StockHeatmap extends React.Component {
       if (i % bandInterval === 0)
         this.drawingContext.fillText(d.ts, x, this.defaults.axisTickSize + this.defaults.xAxisTextPadding);
     });
+    this.drawingContext.textAlign = 'left';
+    this.drawingContext.fillText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`, 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
     this.drawingContext.lineWidth = 1.2;
     this.drawingContext.strokeStyle = this.defaults.axisColor;
     this.drawingContext.stroke();
@@ -521,26 +523,12 @@ export default class StockHeatmap extends React.Component {
     }
   }
 
-  // i = 0;
   /**
    * This updates the data in array to be viewed in graph
    */
   updateWindowedData = () => {
     // console.log('window data updated');
     this.moveDataWindow(this.data.length - this.windowLength - 1);
-    // if (this.autoScroll || (this.windowedData.length === 0)) {
-    //   this.windowedData = this.data.slice(-this.windowLength);
-    //   this.windowPosition = this.data.length - 1 - this.windowLength;
-    // }
-    // this.updateHeatmap();
-    // -------------------- TEST --------------------
-    // setInterval(() => {
-    //   this.i++;
-    //   this.windowedData = this.data.slice(this.i, this.windowLength + this.i);
-    //   console.log('changed', this.windowedData);
-    //   this.updateHeatmap();
-    // }, 1000);
-    // -------------------- TEST --------------------
   }
 
   /**
@@ -560,6 +548,17 @@ export default class StockHeatmap extends React.Component {
       // update the map
       this.updateHeatmap();
     }
+  }
+
+  /**
+   * This sets the Heatmap Zoom level aka. window.
+   * @param {number} zoom The seconds to zoom into
+   */
+  setZoomLevel = (zoom) => {
+    let l = Math.min(Math.max(zoom, 3), this.data.length - 1);
+    let l2 = this.windowLength - l;
+    this.windowLength = l;
+    this.moveDataWindow(this.windowPosition + l2);
   }
 
   /**

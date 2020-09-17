@@ -55,3 +55,21 @@ export const extractMaxTradedVolume = (data) => {
   if (vols.length > 0) return vols[vols.length - 1];
   else return 1;
 }
+
+/**
+ * Format zoom scale time
+ * @param {number} seconds 
+ */
+export const zoomTimeFormat = (seconds) => {
+  if(seconds > 59) {
+    if(seconds > 3599) {
+      let hrs = seconds/3600;
+      return `${hrs.toFixed(2)} hour${hrs>1?'s':''}`;
+    } 
+    else {
+      let mins = seconds/60;
+      return `${mins.toFixed(2)} minute${mins>1?'s':''}`;
+    }
+  }
+  else return `${seconds} second${seconds>1?'s':''}`;
+}
