@@ -35,6 +35,7 @@ export default class StockHeatmap extends React.Component {
   data = [];
   windowedData = [];
   windowLength = 40;
+  windowPosition = 0;
   autoScroll = true;
 
   /** Default Theme colors and dimensions */
@@ -64,6 +65,9 @@ export default class StockHeatmap extends React.Component {
     // console.log('shouldComponentUpdate', nextProps);
     const shouldUpdate = this.props.width !== nextProps.width
       || this.props.height !== nextProps.height;
+    if (shouldUpdate) {
+      this.detachMouseListeners();
+    }
     return shouldUpdate;
   }
 
@@ -73,6 +77,7 @@ export default class StockHeatmap extends React.Component {
     if (this.canvasRef.current !== null) {
       this.drawingContext = this.canvasRef.current.getContext('2d');
       this.updateHeatmap();
+      this.attachMouseListeners();
     }
   }
   componentDidUpdate() {
@@ -80,9 +85,105 @@ export default class StockHeatmap extends React.Component {
     if (this.canvasRef.current !== null) {
       this.drawingContext = this.canvasRef.current.getContext('2d');
       this.updateHeatmap();
+      this.attachMouseListeners();
     }
   }
+  componentWillUnmount() {
+    this.detachMouseListeners();
+  }
   // -------------------END:: Lifecycle methods to retrive 2d context from updated dom---------------------------
+
+
+  // ------------------ START:: Mouse Event listeners -------------------
+  isMouseDown = false;
+  mouseDownX = 0;
+
+  /**
+   * Attaches mouse interaction event listeners
+   */
+  attachMouseListeners = () => {
+    if (this.canvasRef.current !== null) {
+      this.canvasRef.current.addEventListener('mousedown', this.eventMouseDown);
+      this.canvasRef.current.addEventListener('mousemove', this.eventMouseMove);
+      this.canvasRef.current.addEventListener('mouseup', this.eventMouseUp);
+      this.canvasRef.current.addEventListener('wheel', this.eventZoomWheel);
+    }
+  }
+
+  /**
+   * Detaches mouse interaction event listeners
+   */
+  detachMouseListeners = () => {
+    if (this.canvasRef.current !== null) {
+      this.canvasRef.current.removeEventListener('mousedown', this.eventMouseDown);
+      this.canvasRef.current.removeEventListener('mousemove', this.eventMouseMove);
+      this.canvasRef.current.removeEventListener('mouseup', this.eventMouseUp);
+      this.canvasRef.current.removeEventListener('wheel', this.eventZoomWheel);
+    }
+  }
+
+  /**
+   * Mouse down event on canvas
+   * @param {MouseEvent} e 
+   */
+  eventMouseDown = (e) => {
+    // console.log('eventMouseDown', e);
+    this.isMouseDown = true;
+    this.mouseDownX = e.x;
+  }
+
+  /**
+   * Mouse move event on canvas
+   * @param {MouseEvent} e 
+   */
+  eventMouseMove = (e) => {
+    if (this.isMouseDown) {
+      // Mouse drag, scroll the time series
+      const dragLength = e.x - this.mouseDownX;
+      const moveDataPointsCount = Math.floor(Math.abs(dragLength) / this.xScale.bandwidth());
+      if (moveDataPointsCount > 0) this.mouseDownX = e.x;
+      // const moveDataPointDirection = dragLength >= 0 ? 'right' : 'left';
+      // console.log('drag x=', dragLength, moveDataPointsCount, this.windowPosition);
+      this.moveDataWindow(this.windowPosition + moveDataPointsCount * (dragLength >= 0 ? -1 : 1));
+    }
+    else {
+      // normal mouse move
+
+    }
+  }
+
+  /**
+   * Mouse up event on canvas
+   * @param {MouseEvent} e 
+   */
+  eventMouseUp = (e) => {
+    // console.log('eventMouseUp',e);
+    this.isMouseDown = false;
+    this.mouseDownX = 0;
+  }
+
+  /**
+   * Wheel event on canvas to zoom
+   * @param {WheelEvent} e 
+   */
+  eventZoomWheel = (e) => {
+    const direction = e.deltaY < 0 ? 'zoom-in' : 'zoom-out';
+    let l = 0, l2 = 0;
+    switch (direction) {
+      case 'zoom-in':
+        l = Math.max(this.windowLength - 1, 3);
+        break;
+      case 'zoom-out':
+        l = Math.min(this.windowLength + 1, this.data.length - 1);
+        break;
+    }
+    l2 = this.windowLength - l;
+    this.windowLength = l;
+    this.moveDataWindow(this.windowPosition + l2);
+    // console.log('zoom Level=', this.windowLength);
+  }
+
+  // ------------------ END:: Mouse Event listeners ---------------------
 
 
   // ------------------ D3 Variables ---------------------
@@ -104,7 +205,7 @@ export default class StockHeatmap extends React.Component {
    * This function will be called if there is any dimension change on heatmap
    * This function changes the d3 scales based on windowed data
    */
-  updateHeatmapDimensions() {
+  updateHeatmapDimensions = () => {
     // console.log('heatmap dimension updated, update scale domains');
     const { width, height } = this.props;
     if (width > 0 && height > 0 && this.windowedData.length > 0) {
@@ -128,7 +229,7 @@ export default class StockHeatmap extends React.Component {
   /**
    * This method will be called after an update of internal data is performed.
    */
-  updateHeatmap() {
+  updateHeatmap = () => {
     if (this.drawingContext !== null) {
       // console.log('heatmap update req');
       // 1. update scale and dimensions
@@ -156,7 +257,7 @@ export default class StockHeatmap extends React.Component {
   /**
    * Draw buy/sell ratio at bottom right corner
    */
-  drawBuy2SellRatio() {
+  drawBuy2SellRatio = () => {
     if (this.windowedData.length > 0) {
       // dimension
       const d = this.windowedData[this.windowedData.length - 1];
@@ -179,7 +280,7 @@ export default class StockHeatmap extends React.Component {
   /**
    * Draws X Axis
    */
-  drawXAxis() {
+  drawXAxis = () => {
     // clear canvas before axis draw
     this.clearCanvas(
       this.defaults.borderPadding[3], this.defaults.borderPadding[0] + this.defaults.hmHeight(),
@@ -209,7 +310,7 @@ export default class StockHeatmap extends React.Component {
   /**
    * Draws Y Axis and Bid Ask graph at the same time
    */
-  drawYAxisAndBidAskGraph() {
+  drawYAxisAndBidAskGraph = () => {
     if (this.yDomainValues !== null) {
       // clear canvas before axis draw
       this.clearCanvas(
@@ -250,7 +351,7 @@ export default class StockHeatmap extends React.Component {
    * @param {number} x 
    * @param {number} y 
    */
-  drawBidAskGraph(x, y) {
+  drawBidAskGraph = (x, y) => {
     if (this.windowedData.length > 0) {
       if (this.bidAskAnimTimer !== null) {
         this.bidAskAnimTimer.stop();
@@ -306,7 +407,7 @@ export default class StockHeatmap extends React.Component {
   /**
    * Draws background heatmap for both buys and sells
    */
-  drawMainGraph() {
+  drawMainGraph = () => {
     this.drawingContext.save();
     if (this.xScale && this.yScale && this.bidAskScale && this.drawingContext !== null) {
       const maxTradedVolume = extractMaxTradedVolume(this.windowedData);
@@ -382,7 +483,7 @@ export default class StockHeatmap extends React.Component {
    * @param {number} h height
    * @param {string} color color string
    */
-  clearCanvas(x, y, w, h, color) {
+  clearCanvas = (x, y, w, h, color) => {
     // console.log('clear canvas area', x, y, w, h, color);
     if (this.drawingContext !== null) {
       this.drawingContext.save();
@@ -398,7 +499,7 @@ export default class StockHeatmap extends React.Component {
    * Set Data for the Heatmap to generate
    * @param {any[]} data The data to set
    */
-  setData(data) {
+  setData = (data) => {
     console.log('setdata called=', data);
     if (data && data.length > 0) {
       this.data = data;
@@ -410,22 +511,25 @@ export default class StockHeatmap extends React.Component {
    * Add as extra data to existing data array.
    * @param {any} data 
    */
-  addData(data) {
+  addData = (data) => {
     if (typeof (data) === 'object') {
       this.data.push(data);
       this.updateWindowedData();
     }
   }
 
-  i = 0;
+  // i = 0;
   /**
    * This updates the data in array to be viewed in graph
    */
-  updateWindowedData() {
-    if (this.autoScroll || (this.windowedData.length === 0)) {
-      this.windowedData = this.data.slice(-this.windowLength);
-    }
-    this.updateHeatmap();
+  updateWindowedData = () => {
+    // console.log('window data updated');
+    this.moveDataWindow(this.data.length - this.windowLength - 1);
+    // if (this.autoScroll || (this.windowedData.length === 0)) {
+    //   this.windowedData = this.data.slice(-this.windowLength);
+    //   this.windowPosition = this.data.length - 1 - this.windowLength;
+    // }
+    // this.updateHeatmap();
     // -------------------- TEST --------------------
     // setInterval(() => {
     //   this.i++;
@@ -434,6 +538,25 @@ export default class StockHeatmap extends React.Component {
     //   this.updateHeatmap();
     // }, 1000);
     // -------------------- TEST --------------------
+  }
+
+  /**
+   * Move the position of data window within the main data.
+   * @param {number} position The target position of the window to be moved to.
+   */
+  moveDataWindow = (position) => {
+    if (position !== this.windowPosition && position > -1 && position < this.data.length - this.windowLength) {
+      // move position only if within valid range
+      this.windowedData = this.data.slice(position, position + this.windowLength);
+      this.windowPosition = position;
+      if (this.windowPosition === this.data.length - this.windowLength - 1) {
+        // enable auto scroll
+        this.autoScroll = true;
+      }
+      // console.log('moveDataWindow = ', position, this.windowPosition, this.windowLength, this.data.length, this.autoScroll, this.windowedData);
+      // update the map
+      this.updateHeatmap();
+    }
   }
 
   /**
