@@ -294,11 +294,14 @@ export default class StockHeatmap extends React.Component {
     this.drawingContext.lineTo(this.defaults.hmWidth(), 0);
     this.drawingContext.textAlign = 'center';
     this.drawingContext.textBaseline = 'top';
+    const assumedTextWidth = this.drawingContext.measureText('77:77:77').width + 20;
+    const bandInterval = parseInt(assumedTextWidth / (this.xScale?.bandwidth() || 1)) || 1;
+    // console.log('bandInterval=', bandInterval);
     this.windowedData.map((d, i) => {
       let x = this.xScale(d.ts);
       this.drawingContext.moveTo(x, 0);
       this.drawingContext.lineTo(x, this.defaults.axisTickSize);
-      if (i % 2 === 0)
+      if (i % bandInterval === 0)
         this.drawingContext.fillText(d.ts, x, this.defaults.axisTickSize + this.defaults.xAxisTextPadding);
     });
     this.drawingContext.lineWidth = 1.2;
