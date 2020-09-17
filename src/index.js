@@ -306,6 +306,13 @@ export default class StockHeatmap extends React.Component {
     });
     this.drawingContext.textAlign = 'left';
     this.drawingContext.fillText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`, 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
+    let w = this.drawingContext.measureText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`).width;
+    if(this.windowedData.length>0) 
+      this.drawingContext.fillText(`LTP:  ${
+        this.windowedData[this.windowedData.length-1].marketDepth.lastTradedPrice
+      }     LTQ:  ${
+        this.windowedData[this.windowedData.length-1].marketDepth.lastTradedQty
+      }`, 20 + w + 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
     this.drawingContext.lineWidth = 1.2;
     this.drawingContext.strokeStyle = this.defaults.axisColor;
     this.drawingContext.stroke();
