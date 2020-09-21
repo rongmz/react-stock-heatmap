@@ -5,7 +5,6 @@ import * as d3Color from 'd3-color';
 import * as d3Format from 'd3-format';
 import * as d3Interpolate from 'd3-interpolate';
 import * as d3Shape from 'd3-shape';
-import * as d3Zoom from 'd3-zoom';
 import * as d3Timer from 'd3-timer';
 import * as d3Ease from 'd3-ease';
 import { extractBidPrices, extractBidVolumes, extractMaxTradedVolume, extractMaxVolume, zoomTimeFormat } from './utils';
@@ -15,7 +14,7 @@ export const d3 = Object.assign(
     Object.assign({}, d3Scale, d3Array, d3Color)
     , d3Format, d3Interpolate, d3Shape
   )
-  , d3Zoom, d3Ease, d3Timer
+  , d3Ease, d3Timer
 );
 
 /**
@@ -48,6 +47,7 @@ export default class StockHeatmap extends React.Component {
     sellColor: '#d32f2f',
     textOnSellColor: '#ffffff',
     textOnBackground: '#000000',
+    textHighlightOnBackground: '#ff0000',
     tradeColor: '#7434eb',
     axisTickSize: 6,
     axisColor: '#000000',
@@ -55,6 +55,8 @@ export default class StockHeatmap extends React.Component {
     yAxisTextPadding: 6,
     bidAskGraphPaddingLeft: 10,
     bidAskTransitionDuration: 500,
+    volumeCircleMaxRadius: 10,
+    runningRatioSeconds: 5,
     hmWidth: () => (this.props.width - this.defaults.borderPadding[1] - this.defaults.borderPadding[3] - this.defaults.bidAskWidth - this.defaults.axisYWidth),
     hmHeight: () => (this.props.height - this.defaults.borderPadding[0] - this.defaults.borderPadding[2] - this.defaults.axisXHeight),
     clearColor: '#ffffff',
@@ -265,13 +267,26 @@ export default class StockHeatmap extends React.Component {
       const w = this.props.width - x;
       const h = this.props.height - y;
       this.clearCanvas(x, y, w, h, this.defaults.clearColor);
-      let textHeight = (h - 15) / 2;
+      let textHeight = (h - 10) / 2;
       this.drawingContext.save();
       this.drawingContext.textAlign = 'center';
       this.drawingContext.textBaseline = 'middle';
       this.drawingContext.font = `bold ${textHeight}px sans-serif`;
-      this.drawingContext.fillText((d.marketDepth.buyOrderVolume / d.marketDepth.sellOrderVolume).toFixed(2), x + w / 2, y + textHeight / 2);
-      this.drawingContext.fillText('Buy/Sell', x + w / 2, y + textHeight * 1.5 + 5);
+      this.drawingContext.fillText((d.marketDepth.buyOrderVolume / d.marketDepth.sellOrderVolume).toFixed(2), x + w *3/4, y + textHeight / 2);
+      // Runing average ratio
+      if(this.windowedData.length >= this.defaults.runningRatioSeconds) {
+        let sellT20RunningSum = 0;
+        let buyT20RunningSum = 0;
+        for (let i = this.windowedData.length - 1; i >= this.windowedData.length - this.defaults.runningRatioSeconds; i--) {
+          sellT20RunningSum += (this.windowedData[i].marketDepth.sells || []).reduce((vol, s) => vol + s.qty,0);
+          buyT20RunningSum += (this.windowedData[i].marketDepth.buys || []).reduce((vol, s) => vol + s.qty,0);
+        }
+        const newBSTPFactor = (buyT20RunningSum / sellT20RunningSum);
+        this.drawingContext.fillText(newBSTPFactor.toFixed(2), x + w /4, y + textHeight *0.5);
+      }
+      this.drawingContext.font = `bold ${13}px sans-serif`;
+      this.drawingContext.textBaseline = 'bottom';
+      this.drawingContext.fillText('Buy/Sell', x + w / 2, y + textHeight * 2 + 5);
       this.drawingContext.restore();
     }
   }
@@ -297,19 +312,31 @@ export default class StockHeatmap extends React.Component {
     const bandInterval = parseInt(assumedTextWidth / (this.xScale?.bandwidth() || 1)) || 1;
     // console.log('bandInterval=', bandInterval);
     this.windowedData.map((d, i) => {
-      let x = this.xScale(d.ts);
-      this.drawingContext.moveTo(x, 0);
-      this.drawingContext.lineTo(x, this.defaults.axisTickSize);
-      if (i % bandInterval === 0)
+      if (i % bandInterval === 0) {
+        let x = this.xScale(d.ts);
+        this.drawingContext.moveTo(x, 0);
+        this.drawingContext.lineTo(x, this.defaults.axisTickSize);
         this.drawingContext.fillText(d.ts, x, this.defaults.axisTickSize + this.defaults.xAxisTextPadding);
+      }
     });
     this.drawingContext.textAlign = 'left';
+    this.drawingContext.font = '12px Arial';
     this.drawingContext.fillText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`, 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
     let w = this.drawingContext.measureText(`Zoom Level:  ${zoomTimeFormat(this.windowLength)}`).width;
-    if (this.windowedData.length > 0)
+    const maxVolumeInWindowData = extractMaxTradedVolume(this.windowedData);
+    this.drawingContext.fillText(`Max Volume in ${zoomTimeFormat(this.windowLength, 1)}:  `, 20 + w + 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
+    this.drawingContext.fillStyle = this.defaults.textHighlightOnBackground;
+    w += this.drawingContext.measureText(`Max Volume in ${zoomTimeFormat(this.windowLength, 1)}:  `).width;
+    this.drawingContext.font = 'bold 12px Arial';
+    this.drawingContext.fillText(`${maxVolumeInWindowData}`, 20 + w + 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
+    w += this.drawingContext.measureText(`${maxVolumeInWindowData}`).width;
+    if (this.windowedData.length > 0) {
+      this.drawingContext.fillStyle = this.defaults.textOnBackground;
       this.drawingContext.fillText(`LTP:  ${this.windowedData[this.windowedData.length - 1].marketDepth.lastTradedPrice
         }     LTQ:  ${this.windowedData[this.windowedData.length - 1].marketDepth.lastTradedQty
-        }`, 20 + w + 20, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
+        }`, 20 + w + 40, this.defaults.axisTickSize + this.defaults.xAxisTextPadding + 20);
+    }
+    this.drawingContext.fillStyle = this.defaults.textOnBackground;
     this.drawingContext.lineWidth = 1.2;
     this.drawingContext.strokeStyle = this.defaults.axisColor;
     this.drawingContext.stroke();
@@ -460,7 +487,7 @@ export default class StockHeatmap extends React.Component {
         color.opacity = 1;
         this.drawingContext.lineWidth = 1;
         this.drawingContext.fillStyle = color.toString();
-        const r = xh2 * (+marketDepth.lastTradedQty / maxTradedVolume);
+        const r = /*xh2*/ this.defaults.volumeCircleMaxRadius * (+marketDepth.lastTradedQty / maxTradedVolume);
         this.drawingContext.beginPath();
         this.drawingContext.arc(
           this.xScale(ts) /* + xh2*/,

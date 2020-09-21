@@ -60,15 +60,16 @@ export const extractMaxTradedVolume = (data) => {
  * Format zoom scale time
  * @param {number} seconds 
  */
-export const zoomTimeFormat = (seconds) => {
+export const zoomTimeFormat = (seconds, decimal) => {
+  if(!decimal) decimal = 2;
   if(seconds > 59) {
     if(seconds > 3599) {
       let hrs = seconds/3600;
-      return `${hrs.toFixed(2)} hour${hrs>1?'s':''}`;
+      return `${hrs.toFixed(decimal)} hour${hrs>1?'s':''}`;
     } 
     else {
       let mins = seconds/60;
-      return `${mins.toFixed(2)} minute${mins>1?'s':''}`;
+      return `${mins.toFixed(decimal)} minute${mins>1?'s':''}`;
     }
   }
   else return `${seconds} second${seconds>1?'s':''}`;

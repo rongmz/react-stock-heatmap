@@ -5,11 +5,10 @@ import * as d3Color from 'd3-color';
 import * as d3Format from 'd3-format';
 import * as d3Interpolate from 'd3-interpolate';
 import * as d3Shape from 'd3-shape';
-import * as d3Zoom from 'd3-zoom';
 import * as d3Timer from 'd3-timer';
 import * as d3Ease from 'd3-ease';
 
-export const d3: typeof d3Scale & typeof d3Array & typeof d3Color & typeof d3Format & typeof d3Interpolate & typeof d3Shape & typeof d3Zoom & typeof d3Ease & typeof d3Timer;
+export const d3: typeof d3Scale & typeof d3Array & typeof d3Color & typeof d3Format & typeof d3Interpolate & typeof d3Shape & typeof d3Ease & typeof d3Timer;
 /**
  * Stock Heatmap
  * @author Rounak Saha
