@@ -108,6 +108,7 @@ export default class StockHeatmap extends React.Component {
       this.canvasRef.current.addEventListener('mousemove', this.eventMouseMove);
       this.canvasRef.current.addEventListener('mouseup', this.eventMouseUp);
       this.canvasRef.current.addEventListener('wheel', this.eventZoomWheel);
+      this.canvasRef.current.addEventListener('keydown', this.eventKeyDown);
     }
   }
 
@@ -120,6 +121,7 @@ export default class StockHeatmap extends React.Component {
       this.canvasRef.current.removeEventListener('mousemove', this.eventMouseMove);
       this.canvasRef.current.removeEventListener('mouseup', this.eventMouseUp);
       this.canvasRef.current.removeEventListener('wheel', this.eventZoomWheel);
+      this.canvasRef.current.removeEventListener('keydown', this.eventKeyDown);
     }
   }
 
@@ -182,6 +184,23 @@ export default class StockHeatmap extends React.Component {
     this.windowLength = l;
     this.moveDataWindow(this.windowPosition + l2);
     // console.log('zoom Level=', this.windowLength);
+  }
+
+  /**
+   * Event to be triggered when keyboard key is pressed
+   * @param {KeyboardEvent} e 
+   */
+  eventKeyDown = (e) => {
+    e.preventDefault();
+    console.log('key event', e.isComposing, e.key);
+    switch(e.key) {
+      case 'ArrowLeft':
+        this.moveDataWindow(this.windowPosition - 1);
+      break;
+      case 'ArrowRight':
+        this.moveDataWindow(this.windowPosition + 1);
+      break;
+    }
   }
 
   // ------------------ END:: Mouse Event listeners ---------------------
@@ -599,7 +618,7 @@ export default class StockHeatmap extends React.Component {
     const { width, height } = this.props;
     // console.log('heatmap rendered', width, height, this.data);
     return (
-      <canvas ref={this.canvasRef} width={width || 300} height={height || 150}
+      <canvas ref={this.canvasRef} width={width || 300} height={height || 150} tabIndex={1}
         style={{
           display: 'block',
           width: '100%',
