@@ -89,6 +89,12 @@ export default () => {
         <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 4) }}>zoom 4 minutes</button>
         <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 5) }}>zoom 5 minutes</button>
         <button onClick={() => { if (heatmapRef.current !== null) heatmapRef.current.setZoomLevel(60 * 10) }}>zoom 10 minutes</button>
+        <button onClick={() => { 
+          const HHmmss = window.prompt('Enter HH:mm:ss', '00:00:00');
+          let split = HHmmss.split(':');
+          let position = (+split[0]-9)*3600 + (+split[1]*60) + (+split[2]);
+          if (heatmapRef.current !== null) heatmapRef.current.moveDataWindow(position);
+         }}>Set Position</button>
       </div>
     </React.Fragment>
   )

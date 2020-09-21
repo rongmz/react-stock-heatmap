@@ -192,14 +192,14 @@ export default class StockHeatmap extends React.Component {
    */
   eventKeyDown = (e) => {
     e.preventDefault();
-    console.log('key event', e.isComposing, e.key);
-    switch(e.key) {
+    console.log('key event', e.isComposing, e.key, e.ctrlKey);
+    switch (e.key) {
       case 'ArrowLeft':
-        this.moveDataWindow(this.windowPosition - 1);
-      break;
+        this.moveDataWindow(this.windowPosition - (e.ctrlKey ? 10 : 1));
+        break;
       case 'ArrowRight':
-        this.moveDataWindow(this.windowPosition + 1);
-      break;
+        this.moveDataWindow(this.windowPosition + (e.ctrlKey ? 10 : 1));
+        break;
     }
   }
 

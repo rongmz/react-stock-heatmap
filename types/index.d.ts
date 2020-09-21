@@ -36,4 +36,10 @@ export default class StockHeatmap extends React.Component<{
      * @param {number} zoom The seconds to zoom into
      */
     setZoomLevel: (zoom: number) => void;
+
+    /**
+   * Move the position of data window within the main data.
+   * @param {number} position The target position of the window to be moved to.
+   */
+    moveDataWindow: (position: number) => void
 }
